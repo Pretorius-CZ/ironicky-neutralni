@@ -7,7 +7,7 @@ Běží v GitHub Actions. Konfigurace přes proměnné prostředí (repo Secrets
   FB_PAGE_ID         – ID FB stránky
   IG_USER_ID         – Instagram Business Account ID
   GRAPH_VERSION      – výchozí "v21.0"
-  SCHEDULE_START     – ISO datum prvního dne (ideálně pondělí), např. 2026-10-26
+  SCHEDULE_START     – ISO datum prvního dne, např. 2026-10-23
   TARGET_HOUR        – hodina publikování v Europe/Prague (výchozí 18)
   FORCE              – "1" = ignorovat kontrolu hodiny (pro ruční test)
   VIDEO_BASE_URL     – volitelně vlastní veřejná URL pro videa
@@ -37,17 +37,12 @@ def _check(resp, what):
 
 
 def today_index():
-    """Kolikátý pracovní den (Po–Pá) od SCHEDULE_START dnes je."""
-    start = date.fromisoformat(os.environ.get("SCHEDULE_START", "2026-10-26"))
+    """Kolik dní od SCHEDULE_START dnes je (denní publikování)."""
+    start = date.fromisoformat(os.environ.get("SCHEDULE_START", "2026-10-23"))
     today = datetime.now(TZ).date()
     if today < start:
         return 0
-    n, d = 0, start
-    while d < today:
-        if d.weekday() < 5:      # Po=0 .. Pá=4
-            n += 1
-        d += timedelta(days=1)
-    return n
+    return (today - start).days
 
 
 def load_row(index):
