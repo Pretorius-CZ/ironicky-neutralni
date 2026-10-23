@@ -14,7 +14,7 @@ import sys
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-from quotes_loader import load_categories, interleave
+from quotes_loader import load_categories, interleave, build_order
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -189,24 +189,35 @@ def render(quote, out_path, color, angle, seed, handle=DEFAULT_HANDLE):
 
 
 def main():
-    quotes = load_quotes()
-    if not quotes:
-        print("V quotes.txt nejsou žádné citáty.")
-        return
     mode = sys.argv[1] if len(sys.argv) > 1 else "first"
     handle = sys.argv[2] if len(sys.argv) > 2 else DEFAULT_HANDLE
-    if mode == "all":
+
+    if mode in ("all", "both"):
+        order = build_order()
+        if not order:
+            print("V quotes.txt nejsou žádné citáty.")
+            return
         os.makedirs(os.path.join(HERE, "out"), exist_ok=True)
-        for i, q in enumerate(quotes, 1):
-            color = POSTIT_COLORS[(i - 1) % len(POSTIT_COLORS)]
-            render(q, os.path.join(HERE, "out", f"{i:03d}.png"), color, np.random.uniform(-4, 4), i, handle)
-    elif mode == "both":
-        os.makedirs(os.path.join(HERE, "out"), exist_ok=True)
-        for i, q in enumerate(quotes, 1):
-            color = POSTIT_COLORS[(i - 1) % len(POSTIT_COLORS)]
-            render(q, os.path.join(HERE, "out", f"ig_{i:03d}.png"), color, np.random.uniform(-4, 4), i, HANDLE_IG)
-            render(q, os.path.join(HERE, "out", f"fb_{i:03d}.png"), color, np.random.uniform(-4, 4), i, HANDLE_FB)
+        for i, (qid, q, cat) in enumerate(order, 1):
+            color = POSTIT_COLORS[cat % len(POSTIT_COLORS)]
+            angle = ((i * 53) % 9) - 4          # -4..4, deterministicky
+            if mode == "both":
+                ig_path = os.path.join(HERE, "out", f"ig_{i:03d}.png")
+                fb_path = os.path.join(HERE, "out", f"fb_{i:03d}.png")
+                if not os.path.exists(ig_path):
+                    render(q, ig_path, color, angle, i, HANDLE_IG)
+                if not os.path.exists(fb_path):
+                    render(q, fb_path, color, angle, i, HANDLE_FB)
+            else:
+                path = os.path.join(HERE, "out", f"{i:03d}.png")
+                if not os.path.exists(path):
+                    render(q, path, color, angle, i, handle)
+        print("Hotovo, pozic:", len(order))
     else:
+        quotes = load_quotes()
+        if not quotes:
+            print("V quotes.txt nejsou žádné citáty.")
+            return
         render(quotes[0], os.path.join(HERE, "preview.png"), POSTIT_COLORS[0], 2.5, 42, handle)
 
 

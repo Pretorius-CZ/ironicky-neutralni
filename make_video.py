@@ -1,16 +1,18 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Z PNG udělá krátké vertikální video (jemný zoom + fade) s hudbou.
 
+Generuje jen CHYBĚJÍCÍ videa (append-only), takže stará se nedělají znovu.
+
 Použití:
     python make_video.py vstup.png hudba.mp3 [vystup.mp4]
-    python make_video.py              # dávkově: out/ig_*.png a out/fb_*.png -> video/
-                                      # hudba se střídá mezi *.mp3 v projektu
+    python make_video.py              # dávkově: chybějící videa do video/
 """
 import os
 import sys
 import glob
 import subprocess
+
+from quotes_loader import build_order
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FFMPEG = os.path.join(HERE, "ffmpeg.exe")
@@ -43,7 +45,7 @@ def make_video(png, mp3, out_mp4, duration=DURATION, fps=FPS):
         out_mp4,
     ]
     subprocess.run(cmd, check=True)
-    print("OK:", out_mp4)
+    print("OK:", os.path.basename(out_mp4))
 
 
 def main():
@@ -58,19 +60,19 @@ def main():
     if not mp3s:
         print("V projektu nejsou žádné MP3.")
         return
-    pngs = sorted(
-        glob.glob(os.path.join(HERE, "out", "ig_*.png"))
-        + glob.glob(os.path.join(HERE, "out", "fb_*.png"))
-    )
-    if not pngs:
-        print("V out/ nejsou žádné obrázky (spusť nejdřív render.py both).")
+    order = build_order()
+    if not order:
+        print("Žádné citáty.")
         return
     os.makedirs(os.path.join(HERE, "video"), exist_ok=True)
-    for i, png in enumerate(pngs):
-        mp3 = mp3s[i % len(mp3s)]
-        name = os.path.splitext(os.path.basename(png))[0]
-        out = os.path.join(HERE, "video", name + ".mp4")
-        make_video(png, mp3, out)
+    for i, (qid, q, cat) in enumerate(order, 1):
+        mp3 = mp3s[(i - 1) % len(mp3s)]
+        for tag in ("ig", "fb"):
+            png = os.path.join(HERE, "out", f"{tag}_{i:03d}.png")
+            mp4 = os.path.join(HERE, "video", f"{tag}_{i:03d}.mp4")
+            if os.path.exists(mp4) or not os.path.exists(png):
+                continue
+            make_video(png, mp3, mp4)
 
 
 if __name__ == "__main__":

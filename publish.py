@@ -37,17 +37,12 @@ def _check(resp, what):
 
 
 def today_index():
-    """Kolikátý pracovní den (Po–Pá) od SCHEDULE_START dnes je."""
+    """Kolik dní od SCHEDULE_START dnes je (denní publikování)."""
     start = date.fromisoformat(os.environ.get("SCHEDULE_START", "2026-10-26"))
     today = datetime.now(TZ).date()
     if today < start:
         return 0
-    n, d = 0, start
-    while d < today:
-        if d.weekday() < 5:      # Po=0 .. Pá=4
-            n += 1
-        d += timedelta(days=1)
-    return n
+    return (today - start).days
 
 
 def load_row(index):

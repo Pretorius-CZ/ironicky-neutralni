@@ -1,13 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Vygeneruje popisky (captions) pro IG a FB ke každému videu.
-
-Výstup:
-    captions.txt  – lidsky čitelný přehled (k ručnímu kopírování)
-    captions.json – strukturovaný (pro budoucí automatické publikování)
-"""
+"""Vygeneruje popisky (captions) pro IG a FB podle append-only pořadí."""
 import os
 import json
-from quotes_loader import load_categories, interleave, CATEGORIES_META, HANDLE_IG, HANDLE_FB
+from quotes_loader import build_order, CATEGORIES_META, HANDLE_IG, HANDLE_FB
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -19,14 +14,15 @@ def make_caption(quote, cat_index, handle):
 
 
 def main():
-    mixed = interleave(load_categories())
+    order = build_order()
     rows = []
     txt = []
-    for i, (quote, cat_index) in enumerate(mixed, 1):
+    for i, (qid, quote, cat_index) in enumerate(order, 1):
         ig = make_caption(quote, cat_index, HANDLE_IG)
         fb = make_caption(quote, cat_index, HANDLE_FB)
         rows.append({
             "index": i,
+            "id": qid,
             "quote": quote,
             "video_ig": f"ig_{i:03d}.mp4",
             "video_fb": f"fb_{i:03d}.mp4",
