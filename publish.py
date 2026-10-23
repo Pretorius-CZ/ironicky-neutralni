@@ -29,6 +29,13 @@ FB_PAGE_ID = os.environ["FB_PAGE_ID"]
 IG_USER_ID = os.environ["IG_USER_ID"]
 
 
+def _check(resp, what):
+    """Ověří odpověď, ale NIKDY neloguje URL (ta může obsahovat token)."""
+    if resp.status_code >= 400:
+        raise RuntimeError(f"{what}: HTTP {resp.status_code}: {resp.text[:400]}")
+    return resp
+
+
 def today_index():
     """Kolikátý pracovní den (Po–Pá) od SCHEDULE_START dnes je."""
     start = date.fromisoformat(os.environ.get("SCHEDULE_START", "2026-10-26"))
@@ -51,12 +58,14 @@ def load_row(index):
 
 def get_page_token():
     """Z user tokenu vytáhne page token pro FB stránku."""
-    resp = requests.get(
-        f"https://graph.facebook.com/{VER}/me/accounts",
-        params={"access_token": TOKEN},
-        timeout=30,
+    resp = _check(
+        requests.get(
+            f"https://graph.facebook.com/{VER}/me/accounts",
+            params={"access_token": TOKEN},
+            timeout=30,
+        ),
+        "me/accounts",
     )
-    resp.raise_for_status()
     for page in resp.json().get("data", []):
         if page.get("id") == FB_PAGE_ID:
             return page["access_token"]
@@ -64,17 +73,21 @@ def get_page_token():
 
 
 def publish_fb(page_token, video_path, caption):
-    """Nahraje video přímo na FB stránku (multipart, bez veřejné URL)."""
+    """Nahraje video přímo na FB stránku (multipart, bez veřejné URL).
+
+    Token jde v těle multipartu (ne v URL), aby se nikdy neobjevil v logu.
+    """
     url = f"https://graph.facebook.com/{VER}/{FB_PAGE_ID}/videos"
     with open(video_path, "rb") as f:
-        resp = requests.post(
-            url,
-            params={"access_token": page_token},
-            files={"source": (os.path.basename(video_path), f, "video/mp4")},
-            data={"description": caption},
-            timeout=180,
+        resp = _check(
+            requests.post(
+                url,
+                data={"access_token": page_token, "description": caption},
+                files={"source": (os.path.basename(video_path), f, "video/mp4")},
+                timeout=180,
+            ),
+            "FB video",
         )
-    resp.raise_for_status()
     data = resp.json()
     if "id" not in data:
         raise RuntimeError(f"FB chyba: {data}")
@@ -83,39 +96,46 @@ def publish_fb(page_token, video_path, caption):
 
 def publish_ig(video_url, caption):
     """Reels: vytvoří container, počká na FINISHED, publikuje."""
-    init = requests.post(
-        f"https://graph.facebook.com/{VER}/{IG_USER_ID}/media",
-        data={
-            "media_type": "REELS",
-            "video_url": video_url,
-            "caption": caption,
-            "share_to_feed": "true",
-            "access_token": TOKEN,
-        },
-        timeout=60,
+    init = _check(
+        requests.post(
+            f"https://graph.facebook.com/{VER}/{IG_USER_ID}/media",
+            data={
+                "media_type": "REELS",
+                "video_url": video_url,
+                "caption": caption,
+                "share_to_feed": "true",
+                "access_token": TOKEN,
+            },
+            timeout=60,
+        ),
+        "IG media",
     )
-    init.raise_for_status()
     container = init.json()["id"]
 
-    status_url = (
-        f"https://graph.facebook.com/{VER}/{container}"
-        f"?fields=status_code&access_token={TOKEN}"
-    )
     for _ in range(30):
         time.sleep(10)
-        s = requests.get(status_url, timeout=30).json()
+        s = _check(
+            requests.get(
+                f"https://graph.facebook.com/{VER}/{container}",
+                params={"fields": "status_code", "access_token": TOKEN},
+                timeout=30,
+            ),
+            "IG status",
+        ).json()
         sc = s.get("status_code")
         if sc == "FINISHED":
             break
         if sc == "ERROR":
             raise RuntimeError(f"IG zpracování selhalo: {s}")
 
-    pub = requests.post(
-        f"https://graph.facebook.com/{VER}/{IG_USER_ID}/media_publish",
-        data={"creation_id": container, "access_token": TOKEN},
-        timeout=60,
+    pub = _check(
+        requests.post(
+            f"https://graph.facebook.com/{VER}/{IG_USER_ID}/media_publish",
+            data={"creation_id": container, "access_token": TOKEN},
+            timeout=60,
+        ),
+        "IG publish",
     )
-    pub.raise_for_status()
     return pub.json().get("id")
 
 
