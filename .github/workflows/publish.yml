@@ -1,0 +1,36 @@
+name: Publikovat denní citát
+
+on:
+  schedule:
+    # 18:00 v Praze = 17:00 UTC (zima) / 16:00 UTC (léto).
+    # Skript sám zkontroluje, jestli je v Praze 18:00 (DST-safe).
+    - cron: '0 16 * * 1-5'
+    - cron: '0 17 * * 1-5'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Nainstalovat závislosti
+        run: pip install -r requirements.txt
+      - name: Publikovat
+        env:
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          META_APP_ID: ${{ secrets.META_APP_ID }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+          SCHEDULE_START: '2026-10-26'
+          TARGET_HOUR: '18'
+          TZ: Europe/Prague
+          # Ruční spuštění (workflow_dispatch) publikuje hned, bez ohledu na hodinu.
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
+        run: python publish.py

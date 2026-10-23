@@ -1,0 +1,11 @@
+# Binárky a licence — nepatří do repa
+ffmpeg.exe
+*.mp3
+
+# Meziprodukty (lze kdykoli znovu vygenerovat)
+out/
+preview.png
+*.pyc
+__pycache__/
+.npm-cache/
+node_modules/
