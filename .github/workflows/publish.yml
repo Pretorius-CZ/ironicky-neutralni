@@ -2,7 +2,7 @@ name: Publikovat denní citát
 
 on:
   schedule:
-    # 18:00 v Praze = 17:00 UTC (zima) / 16:00 UTC (léto).
+    # 18:00 v Praze = 16:00 UTC (léto) / 17:00 UTC (zima).
     # Skript sám zkontroluje, jestli je v Praze 18:00 (DST-safe).
     - cron: '0 16 * * *'
     - cron: '0 17 * * *'

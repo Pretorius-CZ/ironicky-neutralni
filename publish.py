@@ -7,7 +7,7 @@ Běží v GitHub Actions. Konfigurace přes proměnné prostředí (repo Secrets
   FB_PAGE_ID         – ID FB stránky
   IG_USER_ID         – Instagram Business Account ID
   GRAPH_VERSION      – výchozí "v21.0"
-  SCHEDULE_START     – ISO datum prvního dne (ideálně pondělí), např. 2026-10-26
+  SCHEDULE_START     – ISO datum prvního dne, např. 2026-10-23
   TARGET_HOUR        – hodina publikování v Europe/Prague (výchozí 18)
   FORCE              – "1" = ignorovat kontrolu hodiny (pro ruční test)
   VIDEO_BASE_URL     – volitelně vlastní veřejná URL pro videa
