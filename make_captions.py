@@ -10,7 +10,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 def make_caption(quote, cat_index, handle):
     meta = CATEGORIES_META[cat_index % len(CATEGORIES_META)]
     tags = " ".join("#" + h for h in meta["hashtags"])
-    return f"{meta['emoji']} {quote}\n\n{tags}\n\nSleduj {handle} pro víc. 😎"
+    brand = "#" + handle.lstrip("@")          # IG: #ironicky_neutralni, FB: #ironickyneutralni
+    return f"{meta['emoji']} {quote}\n\n{tags} {brand}\n\nSleduj {handle} pro víc. 😎"
 
 
 def main():
