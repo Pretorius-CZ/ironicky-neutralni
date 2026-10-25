@@ -135,12 +135,6 @@ def publish_ig(video_url, caption):
 
 
 def main():
-    if os.environ.get("FORCE") != "1":
-        target = int(os.environ.get("TARGET_HOUR", "18"))
-        if datetime.now(TZ).hour != target:
-            print(f"Není {target}:00 v {TZ} — přeskočeno.")
-            return
-
     idx = today_index()
     row = load_row(idx)
     print(f"Publikuji #{row['index']}: {row['quote']}")

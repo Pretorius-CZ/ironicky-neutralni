@@ -2,10 +2,9 @@ name: Publikovat denní citát
 
 on:
   schedule:
-    # 18:00 v Praze = 16:00 UTC (léto) / 17:00 UTC (zima).
-    # Skript sám zkontroluje, jestli je v Praze 18:00 (DST-safe).
-    - cron: '0 16 * * *'
-    - cron: '0 17 * * *'
+    # 16:23 UTC = ~18:23 Praha (léto) / ~17:23 Praha (zima). Mimo celou hodinu
+    # (méně zpoždění). Bez striktní hodinové kontroly - publikuje se vždy.
+    - cron: '23 16 * * *'
   workflow_dispatch: {}
 
 permissions:
@@ -29,8 +28,5 @@ jobs:
           META_APP_ID: ${{ secrets.META_APP_ID }}
           META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
           SCHEDULE_START: '2026-10-23'
-          TARGET_HOUR: '18'
           TZ: Europe/Prague
-          # Ruční spuštění (workflow_dispatch) publikuje hned, bez ohledu na hodinu.
-          FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
         run: python publish.py
