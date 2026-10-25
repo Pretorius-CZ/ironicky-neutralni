@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Rychlá promo slideshow (Story): úvod -> lepíky padají do rytmu -> CTA.
+"""Promo slideshow (Story/Reel): úvod -> náhodné lepíky padají do rytmu -> CTA.
 
-Vygeneruje obě verze (IG i FB - liší se jen handle v CTA).
-Použití:  python make_promo.py
-Výstup:   video/promo_story_ig.mp4, video/promo_story_fb.mp4
+Vygeneruje 5 variant pro IG i FB (každá s náhodnými lepíky a jinou CTA).
+Výstup:   video/promo_story_{ig|fb}_{1..5}.mp4
 """
 import os
 import glob
+import random
 import shutil
 import subprocess
 import wave
@@ -29,7 +29,6 @@ FONT_BOLD = r"C:\Windows\Fonts\segoeuib.ttf"
 FONT_REG = r"C:\Windows\Fonts\segoeui.ttf"
 
 MUSIC = "DIMMYSAD - Rocking Forward.mp3"
-INTRO_FILE = os.path.join("out", "intro_3.png")
 
 N = 6
 FALL = 0.30
@@ -43,6 +42,9 @@ TILTS = [-7, 6, -5, 8, -6, 7]
 OFFS = [(0, 0), (110, 70), (-120, -60), (95, 85), (-105, -55), (120, 60)]
 CARD_SCALE = 0.75
 CROP_W, CROP_H = 960, 1220
+
+VARIANTS = 5                                     # 5 různých CTA
+INTROS = [f"out/intro_{i}.png" for i in range(1, 9)]   # střídavé úvody
 
 
 def music_path():
@@ -108,31 +110,58 @@ def make_bg():
     return Image.fromarray(bg.astype(np.uint8), "RGB").convert("RGBA")
 
 
-def make_cta(handle):
+def make_cta(handle, variant):
+    """5 různých podob závěrečné CTA karty."""
     img = Image.new("RGB", (W, H), (26, 26, 34))
     d = ImageDraw.Draw(img)
     d.rectangle([0, 0, W, 16], fill=(255, 210, 80))
-    f1 = ImageFont.truetype(FONT_BOLD, 230)
-    f2 = ImageFont.truetype(FONT_BOLD, 100)
-    f3 = ImageFont.truetype(FONT_REG, 60)
+    yellow = (255, 210, 80)
+    white = (255, 255, 255)
+    grey = (150, 150, 165)
 
-    def c(text, font, y, col):
-        w = d.textlength(text, font=font)
-        d.text(((W - w) // 2, y), text, font=font, fill=col)
+    def line(text, size, y, color):
+        f = ImageFont.truetype(FONT_BOLD, size)
+        w = d.textlength(text, font=f)
+        while w > W - 80 and size > 24:
+            size -= 4
+            f = ImageFont.truetype(FONT_BOLD, size)
+            w = d.textlength(text, font=f)
+        d.text(((W - w) // 2, y), text, font=f, fill=color)
 
-    c("SLEDUJ", f1, 600, (255, 210, 80))
-    c(handle, f2, 930, (255, 255, 255))
-    c(PAGE_NAME, f3, 1080, (150, 150, 165))
-    d.polygon([(540, 1250), (605, 1185), (475, 1185)], fill=(255, 210, 80))
+    v = variant % 5
+    if v == 0:
+        line("SLEDUJ", 230, 600, yellow)
+        line(handle, 100, 930, white)
+        line(PAGE_NAME, 60, 1080, grey)
+        d.polygon([(540, 1250), (605, 1185), (475, 1185)], fill=yellow)
+    elif v == 1:
+        line("SLEDUJ", 230, 560, yellow)
+        line("PRO VÍC", 140, 880, white)
+        line(handle, 80, 1120, grey)
+    elif v == 2:
+        line("PŘIDEJ SE", 170, 640, yellow)
+        line(handle, 85, 920, white)
+        d.polygon([(540, 1200), (605, 1135), (475, 1135)], fill=yellow)
+    elif v == 3:
+        line("DENNÍ DÁVKA", 130, 560, white)
+        line("IRONIE", 230, 760, yellow)
+        line(handle, 90, 1180, grey)
+    else:
+        line("TOHLE JE JEN", 120, 540, white)
+        line("ZAČÁTEK", 210, 700, yellow)
+        line(handle, 85, 1080, white)
+        d.polygon([(540, 1260), (605, 1195), (475, 1195)], fill=yellow)
+
     return img.convert("RGBA")
 
 
 def load_cards():
+    """Náhodně vybere 6 lepíků z out/ig_*.png."""
     imgs = sorted(glob.glob(os.path.join(HERE, "out", "ig_*.png")))
     if len(imgs) < N:
         return []
-    step = max(1, len(imgs) // N)
-    pick = [imgs[min(i * step, len(imgs) - 1)] for i in range(N)]
+    pick = random.sample(imgs, N)
+
     cards = []
     for p, tilt in zip(pick, TILTS):
         img = Image.open(p).convert("RGB")
@@ -150,10 +179,10 @@ def load_cards():
     return cards
 
 
-def build_one(platform, handle, cards, intro, bg, land_times, music, total):
-    cta = make_cta(handle)
+def build_one(platform, handle, cards, intro, bg, land_times, music, total, variant):
+    cta = make_cta(handle, variant)
     nframes = int(total * FPS)
-    frame_dir = os.path.join(HERE, "out", f"promo_frames_{platform}")
+    frame_dir = os.path.join(HERE, "out", f"pf_{platform}_{variant}")
     if os.path.exists(frame_dir):
         shutil.rmtree(frame_dir)
     os.makedirs(frame_dir)
@@ -202,7 +231,7 @@ def build_one(platform, handle, cards, intro, bg, land_times, music, total):
 
         canvas.convert("RGB").save(os.path.join(frame_dir, f"f_{f:04d}.png"))
 
-    out = os.path.join(HERE, "video", f"promo_story_{platform}.mp4")
+    out = os.path.join(HERE, "video", f"promo_story_{platform}_{variant + 1}.mp4")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     cmd = [
         FFMPEG, "-y", "-loglevel", "error", "-nostats",
@@ -227,13 +256,6 @@ def main():
     if not music:
         print("Chybi MP3.")
         return
-    cards = load_cards()
-    if not cards:
-        print("Malo obrazku v out/ (spust nejdriv render.py both).")
-        return
-
-    intro_path = os.path.join(HERE, INTRO_FILE)
-    intro = Image.open(intro_path).convert("RGBA") if os.path.exists(intro_path) else None
     bg = make_bg()
 
     all_times, beat = get_onsets(music, 24)
@@ -241,13 +263,21 @@ def main():
     land_times = [t for t in all_times if t - FALL >= xfade_end][:N]
     if len(land_times) < N:
         land_times = [xfade_end + FALL + i * beat for i in range(N)]
-
     total = land_times[-1] + HOLD + XFADE + CTA_HOLD
-    print("BPM ~", round(60.0 / beat, 1))
-    print("pristani (s):", [round(t, 2) for t in land_times], "| celkem", round(total, 1), "s")
 
-    for platform, handle in PLATFORMS.items():
-        build_one(platform, handle, cards, intro, bg, land_times, music, total)
+    print("BPM ~", round(60.0 / beat, 1), "| celkem", round(total, 1), "s")
+    for v in range(VARIANTS):
+        cards = load_cards()
+        if not cards:
+            print("Malo obrazku v out/ (spust regen.bat).")
+            return
+        intro_path = os.path.join(HERE, random.choice(INTROS))
+        intro = (
+            Image.open(intro_path).convert("RGBA")
+            if os.path.exists(intro_path) else None
+        )
+        for platform, handle in PLATFORMS.items():
+            build_one(platform, handle, cards, intro, bg, land_times, music, total, v)
 
 
 if __name__ == "__main__":

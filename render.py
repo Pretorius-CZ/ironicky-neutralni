@@ -116,18 +116,18 @@ def wrap_text(draw, text, font, max_width):
     return lines
 
 
-def fit_font(text, note_w, note_h, pad=80):
+def fit_font(text, note_w, note_h, pad_x=80, pad_y=80):
     """Největší písmo, při kterém se citát vejde do lepíku."""
     lo, hi, best = 40, 150, 40
     tmp = ImageDraw.Draw(Image.new("RGB", (10, 10)))
     while lo <= hi:
         mid = (lo + hi) // 2
         font = load_font(mid)
-        lines = wrap_text(tmp, text, font, note_w - 2 * pad)
+        lines = wrap_text(tmp, text, font, note_w - 2 * pad_x)
         asc, desc = font.getmetrics()
         lh = int((asc + desc) * 1.22)
         total = lh * len(lines)
-        if total <= note_h - 2 * pad:
+        if total <= note_h - 2 * pad_y:
             best, lo = mid, mid + 1
         else:
             hi = mid - 1
@@ -168,6 +168,16 @@ def render(quote, out_path, color, angle, seed, handle=DEFAULT_HANDLE):
         spacing=spacing,
     )
 
+    # handle jako soucast papirku (otaci se s lepikem, takze se neorezava)
+    fhandle = load_font(40)
+    hw = draw.textlength(handle, font=fhandle)
+    draw.text(
+        ((note_w - hw) // 2, note_h - 60),
+        handle,
+        font=fhandle,
+        fill=FOOTER_COLOR + (255,),
+    )
+
     note = note.rotate(angle, expand=True, resample=Image.Resampling.BICUBIC)
 
     shadow = Image.new("RGBA", (note_w + 120, note_h + 120), (0, 0, 0, 0))
@@ -178,11 +188,6 @@ def render(quote, out_path, color, angle, seed, handle=DEFAULT_HANDLE):
     canvas.alpha_composite(shadow, ((CANVAS_W - shadow.size[0]) // 2, (CANVAS_H - shadow.size[1]) // 2 + 36))
     nw, nh = note.size
     canvas.alpha_composite(note, ((CANVAS_W - nw) // 2, (CANVAS_H - nh) // 2))
-
-    fd2 = ImageDraw.Draw(canvas)
-    ffont = load_font(66)
-    fw = fd2.textlength(handle, font=ffont)
-    fd2.text(((CANVAS_W - fw) // 2, CANVAS_H - 160), handle, font=ffont, fill=FOOTER_COLOR + (255,))
 
     canvas.convert("RGB").save(out_path, quality=95)
     print("uloženo:", out_path, "(písmo", fs, "px)")
