@@ -1,10 +1,8 @@
 name: Publikovat denní citát
 
 on:
-  schedule:
-    # 16:23 UTC = ~18:23 Praha (léto) / ~17:23 Praha (zima). Mimo celou hodinu
-    # (méně zpoždění). Bez striktní hodinové kontroly - publikuje se vždy.
-    - cron: '23 16 * * *'
+  # Cron ZÁMĚRNĚ vypnutý — spouští to Google Apps Script (workflow_dispatch)
+  # každý den v 18:00 Europe/Prague. GitHub cron byl nespolehlivý (zpoždění).
   workflow_dispatch: {}
 
 permissions:
