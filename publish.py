@@ -20,6 +20,8 @@ from zoneinfo import ZoneInfo
 
 import requests
 
+from quotes_loader import HANDLE_IG, HANDLE_FB
+
 VER = os.environ.get("GRAPH_VERSION", "v21.0")
 TZ = ZoneInfo(os.environ.get("TZ", "Europe/Prague"))
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -49,6 +51,20 @@ def load_row(index):
     with open(os.path.join(HERE, "captions.json"), encoding="utf-8") as f:
         rows = json.load(f)
     return rows[index % len(rows)]
+
+
+def promo_caption(handle):
+    brand = "#" + handle.lstrip("@")
+    return (
+        "Denní dávka ironie. 🎬\n\n"
+        f"#ironie #humor #ceskyhumor {brand}\n\n"
+        f"Sleduj {handle} pro víc. 😎"
+    )
+
+
+def promo_variant(today):
+    """Varianta promu 1..5 podle ISO týdne (rotace)."""
+    return (today.isocalendar()[1] % 5) + 1
 
 
 def get_page_token():
@@ -135,9 +151,22 @@ def publish_ig(video_url, caption):
 
 
 def main():
-    idx = today_index()
-    row = load_row(idx)
-    print(f"Publikuji #{row['index']}: {row['quote']}")
+    today = datetime.now(TZ).date()
+
+    if today.weekday() == 6:            # nedele -> promo (rotace)
+        variant = promo_variant(today)
+        video_ig = f"promo_story_ig_{variant}.mp4"
+        video_fb = f"promo_story_fb_{variant}.mp4"
+        caption_ig = promo_caption(HANDLE_IG)
+        caption_fb = promo_caption(HANDLE_FB)
+        print(f"Promo den (nedele) - varianta {variant}")
+    else:
+        row = load_row(today_index())
+        video_ig = row["video_ig"]
+        video_fb = row["video_fb"]
+        caption_ig = row["caption_ig"]
+        caption_fb = row["caption_fb"]
+        print(f"Publikuji #{row['index']}: {row['quote']}")
 
     base = os.environ.get(
         "VIDEO_BASE_URL",
@@ -150,14 +179,14 @@ def main():
         page_token = get_page_token()
         fb_id = publish_fb(
             page_token,
-            os.path.join(HERE, "video", row["video_fb"]),
-            row["caption_fb"],
+            os.path.join(HERE, "video", video_fb),
+            caption_fb,
         )
         print("FB OK:", fb_id)
     except Exception as e:
         print("FB CHYBA (chybí pages_manage_posts?):", e)
 
-    ig_id = publish_ig(base + "video/" + row["video_ig"], row["caption_ig"])
+    ig_id = publish_ig(base + "video/" + video_ig, caption_ig)
     print("IG OK:", ig_id)
 
 
