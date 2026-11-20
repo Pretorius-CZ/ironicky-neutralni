@@ -58,8 +58,17 @@ def promo_caption(handle):
     return (
         "Denní dávka ironie. 🎬\n\n"
         f"#ironie #humor #ceskyhumor {brand}\n\n"
-        f"Sleduj {handle} pro víc. 😎"
+        f"Sleduj {handle} pro víc. 😎\n\n"
+        + PROMO_CREDIT
     )
+
+
+# Hudba v nedělním promu (promo_music.mp3) – licence CC BY 4.0 vyžaduje uvést autora.
+PROMO_CREDIT = (
+    '🎵 "Monkeys Spinning Monkeys" Kevin MacLeod (incompetech.com)\n'
+    "Licensed under Creative Commons: By Attribution 4.0 License\n"
+    "http://creativecommons.org/licenses/by/4.0/"
+)
 
 
 def promo_variant(today):

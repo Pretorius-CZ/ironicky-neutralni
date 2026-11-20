@@ -9,3 +9,14 @@ preview.png
 __pycache__/
 .npm-cache/
 node_modules/
+
+# Tajné údaje (tokeny) – NIKDY do gitu (repo je veřejné!)
+.env
+
+# Výstupy hledače memů (lokální)
+kandidati.json
+kandidati.html
+_anim_*/
+anim_*/
+kandidati/
+memy_hotove/

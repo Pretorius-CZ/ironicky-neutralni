@@ -1,0 +1,18 @@
+# Instagram účty, ze kterých hledač vybírá memy (anglická videa s textem nahoře).
+# Na každý řádek jeden účet: jméno bez @ nebo s @, je to jedno.
+# Za # můžeš připsat poznámku (třeba co se ti na účtu líbí) – hledač ji ignoruje.
+# Řádky začínající # se nepočítají.
+#
+# Příklad:
+# nejakyucet_memes        # kancelářský humor, krátká videa
+#
+# Sem piš:
+https://www.instagram.com/wasted/reels/
+https://www.instagram.com/comedyslam/reels/
+https://www.instagram.com/bingedump/reels/
+https://www.instagram.com/reallydumbtweets/reels/
+https://www.instagram.com/nugget/reels/
+https://www.instagram.com/memezar/reels/
+https://www.instagram.com/memefeedx/reels/
+
+
