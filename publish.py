@@ -8,7 +8,7 @@ Běží v GitHub Actions. Konfigurace přes proměnné prostředí (repo Secrets
   IG_USER_ID         – Instagram Business Account ID
   GRAPH_VERSION      – výchozí "v21.0"
   SCHEDULE_START     – ISO datum prvního dne, např. 2026-10-23
-  TARGET_HOUR        – hodina publikování v Europe/Prague (výchozí 18)
+  TARGET_HOUR        – hodina publikování v Europe/Prague (nepoužívá se; čas určuje Apps Script – 14:00)
   FORCE              – "1" = ignorovat kontrolu hodiny (pro ruční test)
   VIDEO_BASE_URL     – volitelně vlastní veřejná URL pro videa
 """
@@ -159,7 +159,38 @@ def publish_ig(video_url, caption):
     return pub.json().get("id")
 
 
+# --- Telegram (stejný bot jako meme-bot; secrets TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID) -------
+def tg(method, data=None, files=None):
+    tok = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+    chat = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    if not tok or not chat:
+        return
+    try:
+        requests.post(f"https://api.telegram.org/bot{tok}/{method}",
+                      data={"chat_id": chat, **(data or {})}, files=files, timeout=120)
+    except Exception as e:                       # hlášení nesmí shodit publikaci
+        print("Telegram:", type(e).__name__)
+
+
+def ig_permalink(media_id):
+    try:
+        r = requests.get(f"https://graph.facebook.com/{VER}/{media_id}",
+                         params={"fields": "permalink", "access_token": TOKEN}, timeout=30)
+        return r.json().get("permalink")
+    except Exception:
+        return None
+
+
 def main():
+    info = {}
+    try:
+        _main(info)
+    except Exception as e:
+        tg("sendMessage", {"text": f"❌ Lepík {info.get('nazev', '')} se nezveřejnil.\n\n{str(e)[:600]}"})
+        raise
+
+
+def _main(info):
     today = datetime.now(TZ).date()
 
     if today.weekday() == 6:            # nedele -> promo (rotace)
@@ -169,6 +200,8 @@ def main():
         caption_ig = promo_caption(HANDLE_IG)
         caption_fb = promo_caption(HANDLE_FB)
         print(f"Promo den (nedele) - varianta {variant}")
+        info["nazev"] = f"(nedělní promo {variant})"
+        info["text"] = "Nedělní promo video"
     else:
         row = load_row(today_index())
         video_ig = row["video_ig"]
@@ -176,6 +209,8 @@ def main():
         caption_ig = row["caption_ig"]
         caption_fb = row["caption_fb"]
         print(f"Publikuji #{row['index']}: {row['quote']}")
+        info["nazev"] = f"#{row['index']}"
+        info["text"] = row["quote"]
 
     base = os.environ.get(
         "VIDEO_BASE_URL",
@@ -184,6 +219,7 @@ def main():
         f"{os.environ.get('GITHUB_REF_NAME', 'main')}/",
     )
 
+    fb_chyba = None
     try:
         page_token = get_page_token()
         fb_id = publish_fb(
@@ -193,10 +229,22 @@ def main():
         )
         print("FB OK:", fb_id)
     except Exception as e:
+        fb_chyba = str(e)[:300]
         print("FB CHYBA (chybí pages_manage_posts?):", e)
 
     ig_id = publish_ig(base + "video/" + video_ig, caption_ig)
     print("IG OK:", ig_id)
+
+    odkaz = ig_permalink(ig_id)
+    zprava = (f"🟨 Lepík {info['nazev']} zveřejněn na IG" + (" + FB" if not fb_chyba else "") +
+              f"\n\n„{info['text']}“" + (f"\n\n{odkaz}" if odkaz else "") +
+              (f"\n\n⚠️ Facebook selhal: {fb_chyba}" if fb_chyba else ""))
+    try:
+        with open(os.path.join(HERE, "video", video_ig), "rb") as f:
+            tg("sendVideo", {"caption": zprava[:1000], "supports_streaming": "true"},
+               files={"video": (video_ig, f, "video/mp4")})
+    except OSError:
+        tg("sendMessage", {"text": zprava})
 
 
 if __name__ == "__main__":

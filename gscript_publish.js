@@ -1,12 +1,12 @@
 /**
  * Google Apps Script — spustí GitHub Actions workflow "Publikovat denní citát"
- * každý den v 18:00 (Europe/Prague).
+ * každý den ve 14:00 (Europe/Prague).
  *
  * NASTAVENÍ:
  * 1) script.google.com -> New project
  * 2) Vlož tento kód, doplň TOKEN (GitHub PAT s právem "Actions: write")
  * 3) Project Settings -> Time zone: Europe/Prague
- * 4) Spusť funkci setupTrigger() (jednou) - vytvoří denní trigger v 18:00
+ * 4) Spusť funkci setupTrigger() (jednou) - vytvoří denní trigger ve 14:00 (±15 min)
  * 5) Ověř: spusť publishDaily() ručně -> v GitHub Actions by měl naskočit běh
  */
 
@@ -39,9 +39,10 @@ function setupTrigger() {
   });
   ScriptApp.newTrigger('publishDaily')
     .timeBased()
-    .atHour(18)
+    .atHour(14)
+    .nearMinute(0)
     .everyDays(1)
     .inTimezone('Europe/Prague')
     .create();
-  Logger.log('Trigger nastaven: denne 18:00 Europe/Prague');
+  Logger.log('Trigger nastaven: denne 14:00 (±15 min) Europe/Prague');
 }
